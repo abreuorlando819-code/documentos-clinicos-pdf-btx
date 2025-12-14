@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BTX • Gerador de Documentos</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- jsPDF (leve e suficiente para MVP) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">BTX</div>
+        <div class="brandText">
+          <div class="title">Gerador de Documentos</div>
+          <div class="subtitle">MVP Mediano • Layout + PDF • Sem salvamento nesta etapa</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn ghost" id="btnSettings" type="button">Configurações do Profissional</button>
+        <span class="version">v1.0</span>
+      </div>
+    </header>
+
+    <main class="main">
+      <aside class="sidebar">
+        <div class="menuTitle">Módulos</div>
+
+        <button class="navBtn active" data-view="ficha" type="button">Ficha Clínica</button>
+        <button class="navBtn" data-view="receita" type="button">Receituário</button>
+        <button class="navBtn" data-view="orcamento" type="button">Orçamento</button>
+        <button class="navBtn" data-view="atestado" type="button">Atestado</button>
+        <button class="navBtn" data-view="laudo" type="button">Laudo</button>
+
+        <div class="sideNote">
+          Nesta etapa, não há salvamento automático para evitar travamentos.
+        </div>
+      </aside>
+
+      <section class="content">
+        <!-- FICHA -->
+        <div class="view" id="view-ficha">
+          <div class="card">
+            <div class="cardHeader">
+              <div>
+                <h2>Ficha Clínica</h2>
+                <p>Identificação + anamnese + procedimento realizado + plano</p>
+              </div>
+              <div class="cardHeaderActions">
+                <button class="btn" id="pdfFicha" type="button">Baixar PDF</button>
+                <button class="btn ghost" id="printFicha" type="button">Imprimir</button>
+              </div>
+            </div>
+
+            <div class="grid2">
+              <label class="field">Nome do paciente
+                <input id="f_nome" placeholder="Ex.: Wellington Damasceno" />
+              </label>
+              <label class="field">Data
+                <input id="f_data" type="date" />
+              </label>
+              <label class="field">Nascimento
+                <input id="f_nasc" placeholder="dd/mm/aaaa" />
+              </label>
+              <label class="field">Telefone
+                <input id="f_tel" placeholder="(xx) xxxxx-xxxx" />
+              </label>
+              <label class="field span2">Endereço
+                <input id="f_end" placeholder="Rua, nº, bairro, cidade/UF" />
+              </label>
+            </div>
+
+            <label class="field">Motivo da consulta
+              <input id="f_motivo" placeholder="Queixa principal" />
+            </label>
+
+            <label class="field">Anamnese
+              <textarea id="f_anamnese" rows="5" placeholder="História, comorbidades, alergias, medicações, etc."></textarea>
+            </label>
+
+            <div class="grid2">
+              <label class="field">Procedimento realizado hoje
+                <textarea id="f_realizado" rows="4" placeholder="O que foi feito no atendimento de hoje"></textarea>
+              </label>
+              <label class="field">Plano / procedimentos a realizar
+                <textarea id="f_plano" rows="4" placeholder="O que ainda será feito / planejamento"></textarea>
+              </label>
+            </div>
+
+            <label class="field">Observações
+              <textarea id="f_obs" rows="3" placeholder="Observações clínicas adicionais"></textarea>
+            </label>
+          </div>
+        </div>
+
+        <!-- RECEITA -->
+        <div class="view hidden" id="view-receita">
+          <div class="card">
+            <div class="cardHeader">
+              <div>
+                <h2>Receituário</h2>
+                <p>3 modelos rápidos + campo livre</p>
+              </div>
+              <div class="cardHeaderActions">
+                <button class="btn" id="pdfReceita" type="button">Baixar PDF</button>
+                <button class="btn ghost" id="printReceita" type="button">Imprimir</button>
+              </div>
+            </div>
+
+            <div class="grid2">
+              <label class="field">Nome do paciente
+                <input id="r_nome" placeholder="Nome do paciente" />
+              </label>
+              <label class="field">Data
+                <input id="r_data" type="date" />
+              </label>
+              <label class="field span2">Endereço do paciente (opcional)
+                <input id="r_end" placeholder="Rua, nº, bairro, cidade/UF" />
+              </label>
+            </div>
+
+            <div class="quickBox">
+              <div class="quickTitle">Modelos rápidos</div>
+              <div class="quickGrid">
+                <button class="pill" type="button" id="btnDipirona">Dipirona 1g</button>
+                <button class="pill" type="button" id="btnIbu">Ibuprofeno 600mg</button>
+                <button class="pill" type="button" id="btnAmox">Amoxicilina 500mg</button>
+                <button class="pill ghost" type="button" id="btnLimparReceita">Limpar campo</button>
+              </div>
+            </div>
+
+            <label class="field">Prescrição
+              <textarea id="r_texto" rows="10" placeholder="Escreva aqui a prescrição completa (ou use os modelos)"></textarea>
+            </label>
+          </div>
+        </div>
+
+        <!-- ORÇAMENTO -->
+        <div class="view hidden" id="view-orcamento">
+          <div class="card">
+            <div class="cardHeader">
+              <div>
+                <h2>Orçamento</h2>
+                <p>Sem soma automática • texto livre</p>
+              </div>
+              <div class="cardHeaderActions">
+                <button class="btn" id="pdfOrc" type="button">Baixar PDF</button>
+                <button class="btn ghost" id="printOrc" type="button">Imprimir</button>
+              </div>
+            </div>
+
+            <div class="grid2">
+              <label class="field">Nome do paciente
+                <input id="o_nome" placeholder="Nome do paciente" />
+              </label>
+              <label class="field">Data
+                <input id="o_data" type="date" />
+              </label>
+            </div>
+
+            <label class="field">Descrição do orçamento (texto livre)
+              <textarea id="o_texto" rows="12" placeholder="Procedimentos e valores (o profissional soma por fora, se desejar)"></textarea>
+            </label>
+
+            <label class="field">Observações (opcional)
+              <textarea id="o_obs" rows="3" placeholder="Validade, condições, forma de pagamento, etc."></textarea>
+            </label>
+          </div>
+        </div>
+
+        <!-- ATESTADO -->
+        <div class="view hidden" id="view-atestado">
+          <div class="card">
+            <div class="cardHeader">
+              <div>
+                <h2>Atestado</h2>
+                <p>Modelo simples e editável</p>
+              </div>
+              <div class="cardHeaderActions">
+                <button class="btn" id="pdfAtestado" type="button">Baixar PDF</button>
+                <button class="btn ghost" id="printAtestado" type="button">Imprimir</button>
+              </div>
+            </div>
+
+            <div class="grid2">
+              <label class="field">Nome do paciente
+                <input id="a_nome" placeholder="Nome do paciente" />
+              </label>
+              <label class="field">Data
+                <input id="a_data" type="date" />
+              </label>
+            </div>
+
+            <label class="field">Texto do atestado
+              <textarea id="a_texto" rows="10" placeholder="Declaro para os devidos fins..."></textarea>
+            </label>
+          </div>
+        </div>
+
+        <!-- LAUDO -->
+        <div class="view hidden" id="view-laudo">
+          <div class="card">
+            <div class="cardHeader">
+              <div>
+                <h2>Laudo</h2>
+                <p>Texto livre + salvar/carregar modelo (sem histórico)</p>
+              </div>
+              <div class="cardHeaderActions">
+                <button class="btn" id="pdfLaudo" type="button">Baixar PDF</button>
+                <button class="btn ghost" id="printLaudo" type="button">Imprimir</button>
+              </div>
+            </div>
+
+            <div class="grid2">
+              <label class="field">Nome do paciente
+                <input id="l_nome" placeholder="Nome do paciente" />
+              </label>
+              <label class="field">Data
+                <input id="l_data" type="date" />
+              </label>
+            </div>
+
+            <div class="quickBox">
+              <div class="quickTitle">Modelo (local, simples)</div>
+              <div class="quickGrid">
+                <button class="pill" type="button" id="btnSalvarModeloLaudo">Salvar como modelo</button>
+                <button class="pill" type="button" id="btnCarregarModeloLaudo">Carregar modelo</button>
+                <button class="pill ghost" type="button" id="btnLimparLaudo">Limpar campo</button>
+              </div>
+              <div class="hint">Nesta etapa, o modelo é salvo localmente (apenas 1 modelo). Não há lista/histórico.</div>
+            </div>
+
+            <label class="field">Texto do laudo
+              <textarea id="l_texto" rows="14" placeholder="Escreva o laudo aqui..."></textarea>
+            </label>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal Configurações -->
+  <div class="modal hidden" id="modal">
+    <div class="modalCard">
+      <div class="modalHeader">
+        <h3>Configurações do Profissional</h3>
+        <button class="iconBtn" id="closeModal" type="button">×</button>
+      </div>
+
+      <div class="grid2">
+        <label class="field">Nome
+          <input id="p_nome" placeholder="Seu nome" />
+        </label>
+        <label class="field">Conselho (ex.: CRO/CRM) + nº
+          <input id="p_conselho" placeholder="CRO-PA 00000" />
+        </label>
+        <label class="field">Telefone
+          <input id="p_tel" placeholder="(xx) xxxxx-xxxx" />
+        </label>
+        <label class="field">Cidade/UF
+          <input id="p_cidade" placeholder="Belém/PA" />
+        </label>
+        <label class="field span2">Endereço
+          <input id="p_end" placeholder="Rua, nº, bairro" />
+        </label>
+      </div>
+
+      <div class="modalFooter">
+        <button class="btn" id="saveSettings" type="button">Aplicar</button>
+        <button class="btn ghost" id="cancelSettings" type="button">Cancelar</button>
+      </div>
+
+      <div class="hint">
+        Nesta etapa, as configurações valem apenas enquanto a página estiver aberta (sem persistência).
+      </div>
+    </div>
+  </div>
+</body>
+</html>
