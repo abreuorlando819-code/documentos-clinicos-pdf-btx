@@ -10,6 +10,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script defer src="app.js"></script>
 </head>
+
 <body>
   <div class="app">
     <header class="topbar">
@@ -43,6 +44,7 @@
       </aside>
 
       <section class="content">
+
         <!-- FICHA -->
         <div class="view" id="view-ficha">
           <div class="card">
@@ -51,24 +53,31 @@
                 <h2>Ficha Clínica</h2>
                 <p>Identificação + anamnese + procedimento realizado + plano</p>
               </div>
+
               <div class="cardHeaderActions">
-  <button class="btn ghost" id="btnNovoFicha" type="button">Novo</button>
-  <button class="btn" id="pdfFicha" type="button">Baixar PDF</button>
-  <button class="btn ghost" id="printFicha" type="button">Imprimir</button>
+                <button class="btn ghost" id="btnNovoFicha" type="button">Novo</button>
+                <button class="btn" id="pdfFicha" type="button">Baixar PDF</button>
+                <button class="btn ghost" id="printFicha" type="button">Imprimir</button>
               </div>
-                  <div class="grid2">
+            </div>
+
+            <div class="grid2">
               <label class="field">Nome do paciente
                 <input id="f_nome" placeholder="Ex.: Wellington Damasceno" />
               </label>
+
               <label class="field">Data
                 <input id="f_data" type="date" />
               </label>
+
               <label class="field">Nascimento
                 <input id="f_nasc" placeholder="dd/mm/aaaa" />
-          </label>
+              </label>
+
               <label class="field">Telefone
                 <input id="f_tel" placeholder="(xx) xxxxx-xxxx" />
               </label>
+
               <label class="field span2">Endereço
                 <input id="f_end" placeholder="Rua, nº, bairro, cidade/UF" />
               </label>
@@ -86,6 +95,7 @@
               <label class="field">Procedimento realizado hoje
                 <textarea id="f_realizado" rows="4" placeholder="O que foi feito no atendimento de hoje"></textarea>
               </label>
+
               <label class="field">Plano / procedimentos a realizar
                 <textarea id="f_plano" rows="4" placeholder="O que ainda será feito / planejamento"></textarea>
               </label>
@@ -96,7 +106,6 @@
             </label>
           </div>
         </div>
-
         <!-- RECEITA -->
         <div class="view hidden" id="view-receita">
           <div class="card">
@@ -200,7 +209,6 @@
             </label>
           </div>
         </div>
-
         <!-- LAUDO -->
         <div class="view hidden" id="view-laudo">
           <div class="card">
@@ -239,6 +247,7 @@
             </label>
           </div>
         </div>
+
       </section>
     </main>
   </div>
@@ -279,5 +288,6 @@
       </div>
     </div>
   </div>
+
 </body>
 </html>
