@@ -1,7 +1,9 @@
 (() => {
+  // Helpers
   const $ = (id) => document.getElementById(id);
   const qsa = (sel) => Array.from(document.querySelectorAll(sel));
 
+  // Data de hoje (YYYY-MM-DD)
   const todayISO = () => {
     const d = new Date();
     const y = d.getFullYear();
@@ -10,20 +12,65 @@
     return `${y}-${m}-${da}`;
   };
 
-  const setDateToday = () => {
-    ["f_data", "r_data", "o_data", "a_data", "l_data"].forEach((id) => {
-      const el = $(id);
-      if (el && el.type === "date") el.value = todayISO();
-    });
+  // ===== PROFISSIONAL (persistente) =====
+  const PROF_KEY = "btx_prof_v1";
+
+  const profDefault = () => ({
+    nome: "",
+    conselho: "",
+    tel: "",
+    cidade: "Belém/PA",
+    end: ""
+  });
+
+  const getProf = () => {
+    try {
+      const raw = localStorage.getItem(PROF_KEY);
+      if (!raw) return profDefault();
+      const data = JSON.parse(raw);
+      return {
+        nome: (data.nome || "").trim(),
+        conselho: (data.conselho || "").trim(),
+        tel: (data.tel || "").trim(),
+        cidade: (data.cidade || "Belém/PA").trim(),
+        end: (data.end || "").trim(),
+      };
+    } catch {
+      return profDefault();
+    }
   };
 
+  const setProf = (data) => {
+    localStorage.setItem(PROF_KEY, JSON.stringify(data));
+  };
+
+  const profLine = () => {
+    const p = getProf();
+    const parts = [];
+    if (p.nome) parts.push(p.nome);
+    if (p.conselho) parts.push(p.conselho);
+    if (p.tel) parts.push(`Tel: ${p.tel}`);
+    if (p.end) parts.push(p.end);
+    if (p.cidade) parts.push(p.cidade);
+    // se estiver vazio, ao menos mostra cidade (ou uma msg)
+    return parts.join(" • ") || (p.cidade || "Dados do profissional não configurados");
+  };
+
+  // ===== PACIENTE ATIVO (sincronizado) =====
+  const pacienteIds = ["f_nome", "r_nome", "o_nome", "a_nome", "l_nome"];
+
   const getPacienteNome = () => {
-    // prioridade: ficha (f_nome). fallback: receita (r_nome)
-    return ($("f_nome")?.value || $("r_nome")?.value || "").trim();
+    // prioridade ficha, depois receita, etc.
+    for (const id of pacienteIds) {
+      const el = $(id);
+      const v = (el?.value || "").trim();
+      if (v) return v;
+    }
+    return "";
   };
 
   const setPacienteNomeEverywhere = (nome) => {
-    ["f_nome", "r_nome", "o_nome", "a_nome", "l_nome"].forEach((id) => {
+    pacienteIds.forEach((id) => {
       const el = $(id);
       if (el) el.value = nome;
     });
@@ -33,98 +80,99 @@
     const nome = getPacienteNome();
     if (!nome) {
       alert("⚠️ Informe o NOME do paciente antes de emitir PDF/Imprimir.");
-      // joga o usuário pra ficha para preencher
-      showView("ficha");
+      setView("ficha");
       $("f_nome")?.focus();
       return false;
     }
-    // garante consistência (anti-erro)
+    // anti-erro: padroniza o nome em todos os módulos
     setPacienteNomeEverywhere(nome);
     return true;
   };
 
-  // ===== Navegação (robusta) =====
-  const sidebar = document.querySelector(".sidebar");
+  // ===== NAVEGAÇÃO DE MÓDULOS =====
   const navBtns = qsa(".navBtn");
-  const views = qsa(".view");
+  const views = {
+    ficha: $("view-ficha"),
+    receita: $("view-receita"),
+    orcamento: $("view-orcamento"),
+    atestado: $("view-atestado"),
+    laudo: $("view-laudo"),
+  };
 
-  function showView(name) {
-    navBtns.forEach((b) => b.classList.toggle("active", b.dataset.view === name));
-    views.forEach((v) => v.classList.add("hidden"));
-    const target = $(`view-${name}`);
-    if (target) target.classList.remove("hidden");
+  function setView(name) {
+    navBtns.forEach((b) =>
+      b.classList.toggle("active", b.dataset.view === name)
+    );
+    Object.entries(views).forEach(([k, el]) => {
+      if (el) el.classList.toggle("hidden", k !== name);
+    });
   }
 
-  sidebar?.addEventListener("click", (e) => {
-    const btn = e.target.closest(".navBtn");
-    if (!btn) return;
-    const name = btn.dataset.view;
-    if (!name) return;
-    showView(name);
+  navBtns.forEach((btn) => {
+    btn.addEventListener("click", () => setView(btn.dataset.view));
   });
 
-  // ===== Reset total (Novo Paciente) =====
+  // ===== DATAS PADRÃO =====
+  const setDateToday = () => {
+    ["f_data", "r_data", "o_data", "a_data", "l_data"].forEach((id) => {
+      const el = $(id);
+      if (el && el.type === "date") el.value = todayISO();
+    });
+  };
+
+  // ===== RESET TOTAL (NOVO PACIENTE) =====
   function resetAll() {
-    // limpa inputs e textareas
+    // limpa input/textarea (exceto datas)
     document.querySelectorAll("input, textarea").forEach((el) => {
       if (!el) return;
-      if (el.type === "date") return; // seta depois
+      if (el.type === "date") return;
       el.value = "";
     });
-
     setDateToday();
-    showView("ficha");
+    setView("ficha");
     $("f_nome")?.focus();
   }
 
-  // Botão “Novo” da ficha vira “Novo paciente” (com confirmação)
-  const btnNovo = $("btnNovoFicha");
-  if (btnNovo) {
-    btnNovo.addEventListener("click", () => {
-      const ok = confirm("Iniciar NOVO paciente? Isso vai limpar todos os campos.");
-      if (ok) resetAll();
-    });
-  }
+  $("btnNovoFicha")?.addEventListener("click", () => {
+    const ok = confirm("Iniciar NOVO paciente? Isso vai limpar todos os campos.");
+    if (ok) resetAll();
+  });
 
-  // ===== Profissional (modal) =====
-  const prof = { nome: "", conselho: "", tel: "", cidade: "Belém/PA", end: "" };
+  // sincroniza nome digitado na ficha -> todos
+  $("f_nome")?.addEventListener("input", (e) => {
+    setPacienteNomeEverywhere((e.target.value || "").trimStart());
+  });
+
+  // ===== MODAL PROFISSIONAL =====
   const modal = $("modal");
-
   const closeModal = () => modal?.classList.add("hidden");
 
   $("btnSettings")?.addEventListener("click", () => {
-    if (!modal) return;
-    $("p_nome") && ($("p_nome").value = prof.nome);
-    $("p_conselho") && ($("p_conselho").value = prof.conselho);
-    $("p_tel") && ($("p_tel").value = prof.tel);
-    $("p_cidade") && ($("p_cidade").value = prof.cidade);
-    $("p_end") && ($("p_end").value = prof.end);
-    modal.classList.remove("hidden");
+    const p = getProf();
+    $("p_nome") && ($("p_nome").value = p.nome);
+    $("p_conselho") && ($("p_conselho").value = p.conselho);
+    $("p_tel") && ($("p_tel").value = p.tel);
+    $("p_cidade") && ($("p_cidade").value = p.cidade);
+    $("p_end") && ($("p_end").value = p.end);
+    modal?.classList.remove("hidden");
   });
 
   $("closeModal")?.addEventListener("click", closeModal);
   $("cancelSettings")?.addEventListener("click", closeModal);
 
   $("saveSettings")?.addEventListener("click", () => {
-    prof.nome = ($("p_nome")?.value || "").trim();
-    prof.conselho = ($("p_conselho")?.value || "").trim();
-    prof.tel = ($("p_tel")?.value || "").trim();
-    prof.cidade = (($("p_cidade")?.value || "").trim() || "Belém/PA");
-    prof.end = ($("p_end")?.value || "").trim();
+    const p = {
+      nome: ($("p_nome")?.value || "").trim(),
+      conselho: ($("p_conselho")?.value || "").trim(),
+      tel: ($("p_tel")?.value || "").trim(),
+      cidade: (($("p_cidade")?.value || "").trim() || "Belém/PA"),
+      end: ($("p_end")?.value || "").trim(),
+    };
+    setProf(p);
     closeModal();
   });
 
-  const profLine = () => {
-    const parts = [];
-    if (prof.nome) parts.push(prof.nome);
-    if (prof.conselho) parts.push(prof.conselho);
-    if (prof.tel) parts.push(`Tel: ${prof.tel}`);
-    if (prof.end) parts.push(prof.end);
-    if (prof.cidade) parts.push(prof.cidade);
-    return parts.join(" • ");
-  };
-
-  // ===== Receita modelos rápidos =====
+  // ===== RECEITA: MODELOS RÁPIDOS =====
   function appendRx(text) {
     const t = $("r_texto");
     if (!t) return;
@@ -132,116 +180,104 @@
     t.value = (t.value + sep + text).trimStart();
   }
 
-  $("btnDipirona")?.addEventListener("click", () =>
-    appendRx("DIPIRONA 1g\nTomar 1 comprimido a cada 6/6 horas, se dor, por 3 dias.")
-  );
-  $("btnIbu")?.addEventListener("click", () =>
-    appendRx("IBUPROFENO 600mg\nTomar 1 comprimido a cada 8/8 horas, após alimentação, por 3 dias.")
-  );
-  $("btnAmox")?.addEventListener("click", () =>
-    appendRx("AMOXICILINA 500mg\nTomar 1 cápsula a cada 8/8 horas, por 7 dias.")
-  );
+  $("btnDipirona")?.addEventListener("click", () => {
+    appendRx("DIPIRONA 1g\nTomar 1 comprimido a cada 6/6 horas, se dor, por 3 dias.");
+  });
+  $("btnIbu")?.addEventListener("click", () => {
+    appendRx("IBUPROFENO 600mg\nTomar 1 comprimido a cada 8/8 horas, após alimentação, por 3 dias.");
+  });
+  $("btnAmox")?.addEventListener("click", () => {
+    appendRx("AMOXICILINA 500mg\nTomar 1 cápsula a cada 8/8 horas, por 7 dias.");
+  });
   $("btnLimparReceita")?.addEventListener("click", () => {
     const t = $("r_texto");
     if (t) t.value = "";
   });
 
-  // ===== Laudo modelo 1 =====
+  // ===== LAUDO: 1 MODELO LOCAL =====
   const LAUDO_MODEL_KEY = "btx_laudo_modelo_v1";
+
   $("btnSalvarModeloLaudo")?.addEventListener("click", () => {
     const txt = ($("l_texto")?.value || "").trim();
     if (!txt) return alert("Escreva o texto do laudo antes de salvar como modelo.");
     localStorage.setItem(LAUDO_MODEL_KEY, txt);
     alert("Modelo salvo localmente.");
   });
+
   $("btnCarregarModeloLaudo")?.addEventListener("click", () => {
     const txt = localStorage.getItem(LAUDO_MODEL_KEY);
     if (!txt) return alert("Ainda não existe modelo salvo.");
     const t = $("l_texto");
     if (t) t.value = txt;
   });
+
   $("btnLimparLaudo")?.addEventListener("click", () => {
     const t = $("l_texto");
     if (t) t.value = "";
   });
 
-  // ===== Coleta linhas =====
-  const v = (id) => ($(id)?.value || "").trim();
+  // ===== TEXTO / COLETA =====
+  const v = (id) => ($(`${id}`)?.value || "").trim();
 
-  function linesFicha() {
-    const nome = getPacienteNome() || "-";
-    return [
-      `Paciente: ${nome}`,
-      `Data: ${v("f_data") || "-"}`,
-      `Nascimento: ${v("f_nasc") || "-"}`,
-      `Telefone: ${v("f_tel") || "-"}`,
-      `Endereço: ${v("f_end") || "-"}`,
-      "",
-      `Motivo da consulta: ${v("f_motivo") || "-"}`,
-      "",
-      "ANAMNESE:",
-      v("f_anamnese") || "-",
-      "",
-      "PROCEDIMENTO REALIZADO HOJE:",
-      v("f_realizado") || "-",
-      "",
-      "PLANO / PROCEDIMENTOS A REALIZAR:",
-      v("f_plano") || "-",
-      "",
-      "OBSERVAÇÕES:",
-      v("f_obs") || "-",
-    ];
-  }
+  const linesFicha = () => ([
+    `Paciente: ${getPacienteNome() || "-"}`,
+    `Data: ${v("f_data") || "-"}`,
+    `Nascimento: ${v("f_nasc") || "-"}`,
+    `Telefone: ${v("f_tel") || "-"}`,
+    `Endereço: ${v("f_end") || "-"}`,
+    "",
+    `Motivo da consulta: ${v("f_motivo") || "-"}`,
+    "",
+    "ANAMNESE:",
+    v("f_anamnese") || "-",
+    "",
+    "PROCEDIMENTO REALIZADO HOJE:",
+    v("f_realizado") || "-",
+    "",
+    "PLANO / PROCEDIMENTOS A REALIZAR:",
+    v("f_plano") || "-",
+    "",
+    "OBSERVAÇÕES:",
+    v("f_obs") || "-",
+  ]);
 
-  function linesReceita() {
-    const nome = getPacienteNome() || "-";
-    return [
-      `Paciente: ${nome}`,
-      `Data: ${v("r_data") || "-"}`,
-      `Endereço: ${v("r_end") || "-"}`,
-      "",
-      "PRESCRIÇÃO:",
-      v("r_texto") || "-",
-    ];
-  }
+  const linesReceita = () => ([
+    `Paciente: ${getPacienteNome() || "-"}`,
+    `Data: ${v("r_data") || "-"}`,
+    `Endereço: ${v("r_end") || "-"}`,
+    "",
+    "PRESCRIÇÃO:",
+    v("r_texto") || "-",
+  ]);
 
-  function linesOrc() {
-    const nome = getPacienteNome() || "-";
-    return [
-      `Paciente: ${nome}`,
-      `Data: ${v("o_data") || "-"}`,
-      "",
-      "DESCRIÇÃO DO ORÇAMENTO:",
-      v("o_texto") || "-",
-      "",
-      "OBSERVAÇÕES:",
-      v("o_obs") || "-",
-    ];
-  }
+  const linesOrc = () => ([
+    `Paciente: ${getPacienteNome() || "-"}`,
+    `Data: ${v("o_data") || "-"}`,
+    "",
+    "DESCRIÇÃO DO ORÇAMENTO:",
+    v("o_texto") || "-",
+    "",
+    "OBSERVAÇÕES:",
+    v("o_obs") || "-",
+  ]);
 
-  function linesAtestado() {
-    const nome = getPacienteNome() || "-";
-    return [
-      `Paciente: ${nome}`,
-      `Data: ${v("a_data") || "-"}`,
-      "",
-      "ATESTADO:",
-      v("a_texto") || "-",
-    ];
-  }
+  const linesAtestado = () => ([
+    `Paciente: ${getPacienteNome() || "-"}`,
+    `Data: ${v("a_data") || "-"}`,
+    "",
+    "ATESTADO:",
+    v("a_texto") || "-",
+  ]);
 
-  function linesLaudo() {
-    const nome = getPacienteNome() || "-";
-    return [
-      `Paciente: ${nome}`,
-      `Data: ${v("l_data") || "-"}`,
-      "",
-      "LAUDO:",
-      v("l_texto") || "-",
-    ];
-  }
+  const linesLaudo = () => ([
+    `Paciente: ${getPacienteNome() || "-"}`,
+    `Data: ${v("l_data") || "-"}`,
+    "",
+    "LAUDO:",
+    v("l_texto") || "-",
+  ]);
 
-  // ===== Impressão / PDF =====
+  // ===== IMPRESSÃO =====
   const escapeHtml = (s) =>
     String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 
@@ -278,12 +314,13 @@
     w.document.close();
   }
 
+  // ===== PDF (jsPDF) =====
   async function makePDF(title, bodyLines, filename) {
     if (!ensureNomeAntesDeEmitir()) return;
 
     const jspdf = window.jspdf;
     if (!jspdf?.jsPDF) {
-      alert("Biblioteca de PDF não carregou. Verifique sua internet no primeiro carregamento.");
+      alert("Biblioteca de PDF não carregou. Verifique a internet no primeiro carregamento.");
       return;
     }
 
@@ -296,25 +333,31 @@
     const frameW = pageW - margin * 2;
     const frameH = pageH - margin * 2;
 
+    // Moldura
     doc.setLineWidth(0.4);
     doc.rect(frameX, frameY, frameW, frameH);
 
     let y = frameY + 10;
+
+    // Título
     doc.setFont("helvetica", "bold");
     doc.setFontSize(14);
     doc.text(title, frameX + 6, y);
 
+    // Linha do profissional (AGORA SEMPRE PUXA DO localStorage)
     y += 6;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    const pInfo = profLine() || "Dados do profissional (configure em: Configurações do Profissional)";
+    const pInfo = profLine();
     const pLines = doc.splitTextToSize(pInfo, frameW - 12);
     doc.text(pLines, frameX + 6, y);
 
+    // Separador
     y += pLines.length * 4 + 3;
     doc.setLineWidth(0.2);
     doc.line(frameX + 6, y, frameX + frameW - 6, y);
 
+    // Corpo
     y += 6;
     doc.setFontSize(11);
     const content = bodyLines.join("\n");
@@ -332,6 +375,7 @@
       curY += 5;
     }
 
+    // Rodapé assinatura
     if (curY < frameY + frameH - 16) curY = frameY + frameH - 16;
     doc.setLineWidth(0.2);
     doc.line(frameX + 6, curY, frameX + frameW - 6, curY);
@@ -341,7 +385,7 @@
     doc.save(filename);
   }
 
-  // ===== Emissão (com segurança) =====
+  // ===== BOTÕES: PDF + IMPRIMIR =====
   $("pdfFicha")?.addEventListener("click", () => makePDF("FICHA CLÍNICA", linesFicha(), "ficha_clinica.pdf"));
   $("printFicha")?.addEventListener("click", () => printSimple("FICHA CLÍNICA", linesFicha()));
 
@@ -357,14 +401,7 @@
   $("pdfLaudo")?.addEventListener("click", () => makePDF("LAUDO", linesLaudo(), "laudo.pdf"));
   $("printLaudo")?.addEventListener("click", () => printSimple("LAUDO", linesLaudo()));
 
-  // ===== Sincronização do nome do paciente =====
-  // Sempre que você digitar na ficha, ele replica para os outros módulos
-  $("f_nome")?.addEventListener("input", (e) => {
-    const nome = (e.target.value || "").trimStart();
-    setPacienteNomeEverywhere(nome);
-  });
-
-  // Inicialização
+  // ===== START =====
   setDateToday();
-  showView("ficha");
+  setView("ficha");
 })();
